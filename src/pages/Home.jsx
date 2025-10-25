@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <div className="home">
-      <h1>🍴 Restaurant Tinder</h1>
+      <h1>🍴 Munch Match</h1>
       <CardStack restaurants={restaurants} onSwipe={() => setCurrent(i => i + 1)} />
       {currentRestaurant && (
         <MapView
