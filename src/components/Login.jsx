@@ -1,29 +1,37 @@
 import React, { useState } from "react";
-import { signIn, signUp } from "../services/supabase";
+import { signIn, signUp, supabase } from "../services/supabase";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignIn = async () => {
-    try {
-      const { data, error } = await signIn(email, password);
-      if (error) throw error;
-      onLogin(data.user.id); // pass user ID to App
-    } catch (err) {
-      console.error(err);
-      alert("Failed to sign in: " + err.message);
-    }
-  };
-
   const handleSignUp = async () => {
     try {
       const { data, error } = await signUp(email, password);
       if (error) throw error;
+
+      // Once user is created, add them to your custom table
+      const user = data.user;
+      if (user) {
+        const { error: insertError } = await supabase
+          .from("user_profiles")
+          .insert([{ id: user.id, email: user.email }]);
+        if (insertError) throw insertError;
+      }
+
+      onLogin(user.id);
+    } catch (err) {
+      alert("Failed to sign up: " + err.message);
+    }
+  };
+
+  const handleSignIn = async () => {
+    try {
+      const { data, error } = await signIn(email, password);
+      if (error) throw error;
       onLogin(data.user.id);
     } catch (err) {
-      console.error(err);
-      alert("Failed to sign up: " + err.message);
+      alert("Failed to sign in: " + err.message);
     }
   };
 

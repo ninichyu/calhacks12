@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { supabase } from "../services/supabase";
 import SwipeCard from "./SwipeCard"; // optional, or just render a div for demo
 
-export default function CardStack({ restaurants }) {
+export default function CardStack({ userID, restaurants }) {
   const [index, setIndex] = useState(0); // track current card
 
   if (!restaurants.length) return <p>Loading...</p>;
@@ -9,11 +10,12 @@ export default function CardStack({ restaurants }) {
 
   const current = restaurants[index];
 
-  // handle swipe
-  const handleSwipe = (action) => {
-    console.log(`User swiped ${action} on ${current.name}`);
-    setIndex(index + 1); // move to next card
-  };
+  async function saveUserSwipe(userId, restaurantId, decision) {
+  const { error } = await supabase
+    .from("user_swipes")
+    .insert([{ user_id: userId, restaurant_id: restaurantId, decision }]);
+  if (error) console.error("Error saving swipe:", error);
+}
 
   return (
     <div className="card-stack">
@@ -32,8 +34,8 @@ export default function CardStack({ restaurants }) {
       </div>
 
       <div className="buttons">
-        <button onClick={() => handleSwipe("nope")}>❌ Nope</button>
-        <button onClick={() => handleSwipe("like")}>💚 Like</button>
+        <button onClick={() => saveUserSwipe("nope")}>❌ Nope</button>
+        <button onClick={() => saveUserSwipe("like")}>💚 Like</button>
       </div>
     </div>
   );
