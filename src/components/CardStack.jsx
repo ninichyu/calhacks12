@@ -41,7 +41,10 @@ function saveUserSwipe(userId, restaurantId, action) {
                 borderRadius: "8px" 
             }}/>
         <h3>{current.name}</h3>
-        <p>{current.rating} ⭐ • {current.categories.join(", ")}</p>
+        <p>
+  {current.rating} ⭐ • {current.categories ? current.categories.join(", ") : ""}
+</p>
+
         <p>{current.location}</p>
       </div>
 

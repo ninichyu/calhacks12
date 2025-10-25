@@ -6,26 +6,51 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Sign up new user
-  const handleSignUp = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-
-      const user = data.user;
-      if (!user) throw new Error("User creation failed");
-
-      // Insert into custom table for foreign key use, ignore duplicates
- 
-
-      onLogin(user.id);
-    } catch (err) {
-      alert("Sign-up failed: " + err.message);
-    } finally {
-      setLoading(false);
-    }
+  // Helper: ensure user exists in custom table
+  const ensureUserInTable = async (user) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("users")
+      .upsert([{ id: user.id, email: user.email }], { onConflict: ["id"] });
+    if (error) console.error("Failed to insert/update user:", error.message);
   };
+
+ // Sign up new user
+const handleSignUp = async () => {
+  setLoading(true);
+  try {
+    // First, check if user already exists in custom users table
+    const { data: existingUsers, error: checkError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email);
+
+    if (checkError) throw checkError;
+
+    if (existingUsers && existingUsers.length > 0) {
+      // User already exists — try signing them in instead
+      alert("User already exists, signing you in...");
+      setLoading(false);
+      return await handleSignIn(); // Call sign-in instead of creating duplicate
+    }
+
+    // Proceed with Supabase Auth signup
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+
+    const user = data.user;
+    if (!user) throw new Error("User creation failed");
+
+    // Insert into users table for foreign key use
+    await ensureUserInTable(user);
+
+    onLogin(user.id);
+  } catch (err) {
+    alert("Sign-up failed: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Sign in existing user
   const handleSignIn = async () => {
@@ -37,9 +62,7 @@ export default function Login({ onLogin }) {
       const user = data.user;
       if (!user) throw new Error("Sign-in failed");
 
-      // Ensure user exists in custom table
-
-
+      await ensureUserInTable(user);
       onLogin(user.id);
     } catch (err) {
       alert("Sign-in failed: " + err.message);
@@ -47,7 +70,6 @@ export default function Login({ onLogin }) {
       setLoading(false);
     }
   };
-
 
   return (
     <div>
@@ -65,8 +87,12 @@ export default function Login({ onLogin }) {
         onChange={e => setPassword(e.target.value)}
       />
       <div style={{ marginTop: "10px" }}>
-        <button onClick={handleSignIn}>Sign In</button>
-        <button onClick={handleSignUp}>Sign Up</button>
+        <button onClick={handleSignIn} disabled={loading}>
+          {loading ? "Signing In..." : "Sign In"}
+        </button>
+        <button onClick={handleSignUp} disabled={loading}>
+          {loading ? "Signing Up..." : "Sign Up"}
+        </button>
       </div>
     </div>
   );
