@@ -29,6 +29,13 @@ function saveUserSwipe(userId, restaurantId, action) {
     });
 }
 
+const categories =
+  Array.isArray(current.categories)
+    ? current.categories
+    : typeof current.categories === "string"
+    ? current.categories.replace(/[\[\]"]+/g, "").split(",").map(s => s.trim())
+    : [];
+
   return (
     <div className="card-stack">
       <div className="card">
@@ -42,7 +49,7 @@ function saveUserSwipe(userId, restaurantId, action) {
             }}/>
         <h3>{current.name}</h3>
         <p>
-  {current.rating} ⭐ • {current.categories ? current.categories.join(", ") : ""}
+  {current.rating} ⭐ • {categories.join(", ")}
 </p>
 
         <p>{current.location}</p>
