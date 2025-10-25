@@ -1,0 +1,30 @@
+body {
+  font-family: system-ui, sans-serif;
+  background-color: #fefefe;
+  margin: 0;
+  text-align: center;
+}
+
+.swipe-card {
+  width: 300px;
+  margin: 20px auto;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.swipe-card img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+}
+
+.card-info {
+  padding: 12px;
+}
+
+.buttons button {
+  margin: 10px;
+  font-size: 20px;
+  cursor: pointer;
+}
