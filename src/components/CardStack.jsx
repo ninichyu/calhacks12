@@ -12,8 +12,11 @@ export default function CardStack({ userID, restaurants }) {
 
   async function saveUserSwipe(userId, restaurantId, action) {
   const { error } = await supabase
-    .from("user_swipes")
-    .insert([{ user_id: userId, restaurant_id: restaurantId, action: action }]);
+  .from("swipes")
+  .upsert(
+    [{ user_id: userId, restaurant_id: restaurantId, action: action }],
+    { onConflict: ["user_id", "restaurant_id"] }
+  );
   if (error) console.error("Error saving swipe:", error);
 
   setIndex(index + 1);
@@ -36,8 +39,8 @@ export default function CardStack({ userID, restaurants }) {
       </div>
 
       <div className="buttons">
-        <button onClick={() => saveUserSwipe("nope")}>❌ Nope</button>
-        <button onClick={() => saveUserSwipe("like")}>💚 Like</button>
+        <button onClick={() => saveUserSwipe(userID, current.id, 0)}>❌ Nope</button>
+        <button onClick={() => saveUserSwipe(userID, current.id, 1)}>💚 Like</button>
       </div>
     </div>
   );
