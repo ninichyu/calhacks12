@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "name": "Sushi Haven",
+    "image_url": "https://images.unsplash.com/photo-1553621042-f6e147245754",
+    "rating": 4.5,
+    "categories": ["Japanese", "Sushi"],
+    "location": "Berkeley, CA",
+    "latitude": 37.8715,
+    "longitude": -122.2730
+  },
+  {
+    "id": "2",
+    "name": "Taco Fiesta",
+    "image_url": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092",
+    "rating": 4.0,
+    "categories": ["Mexican", "Tacos"],
+    "location": "Berkeley, CA",
+    "latitude": 37.8690,
+    "longitude": -122.2680
+  },
+  {
+    "id": "3",
+    "name": "Pasta Palace",
+    "image_url": "https://images.unsplash.com/photo-1603133872872-684f208fb34b",
+    "rating": 4.3,
+    "categories": ["Italian", "Pasta"],
+    "location": "Berkeley, CA",
+    "latitude": 37.8702,
+    "longitude": -122.2710
+  }
+]

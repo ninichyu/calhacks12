@@ -8,7 +8,7 @@ export async function fetchRestaurants() {
       rating: 4.5,
       price: "$$",
       location: { city: "San Francisco" },
-      coordinates: { latitude: 37.77, longitude: -122.42 },
+      coordinates: { latitude: 37.77, longitude: -122.42 },ow 
     },
     {
       id: "2",
