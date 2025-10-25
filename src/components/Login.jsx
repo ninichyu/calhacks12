@@ -14,7 +14,7 @@ export default function Login({ onLogin }) {
       const user = data.user;
       if (user) {
         const { error: insertError } = await supabase
-          .from("user_profiles")
+          .from("users")
           .insert([{ id: user.id, email: user.email }]);
         if (insertError) throw insertError;
       }
