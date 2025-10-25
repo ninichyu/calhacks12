@@ -7,6 +7,20 @@ export default function Login({ onLogin }) {
 
   const handleSignUp = async () => {
     try {
+
+      const { data: existingUsers, error: fetchError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email);
+
+      if (fetchError) throw fetchError;
+
+      if (existingUsers && existingUsers.length > 0) {
+        // User already exists — try signing them in instead
+        alert("User already exists, signing you in...");
+        return await handleSignIn();
+      }
+      
       const { data, error } = await signUp(email, password);
       if (error) throw error;
 
