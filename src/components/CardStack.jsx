@@ -10,11 +10,13 @@ export default function CardStack({ userID, restaurants }) {
 
   const current = restaurants[index];
 
-  async function saveUserSwipe(userId, restaurantId, decision) {
+  async function saveUserSwipe(userId, restaurantId, action) {
   const { error } = await supabase
     .from("user_swipes")
-    .insert([{ user_id: userId, restaurant_id: restaurantId, decision }]);
+    .insert([{ user_id: userId, restaurant_id: restaurantId, action: action }]);
   if (error) console.error("Error saving swipe:", error);
+
+  setIndex(index + 1);
 }
 
   return (
