@@ -9,17 +9,24 @@ export default function CardStack({ userID, restaurants }) {
   if (index >= restaurants.length) return <p>No more restaurants!</p>;
 
   const current = restaurants[index];
+  console.log("userID:", userID, "restaurantID:", current.id);
 
-  async function saveUserSwipe(userId, restaurantId, action) {
-  const { error } = await supabase
-  .from("swipes")
-  .upsert(
-    [{ user_id: userId, restaurant_id: restaurantId, action: action }],
-    { onConflict: ["user_id", "restaurant_id"] }
-  );
-  if (error) console.error("Error saving swipe:", error);
+function saveUserSwipe(userId, restaurantId, action) {
+  // Move to next card immediately
+  setIndex(prev => prev + 1);
 
-  setIndex(index + 1);
+  // Save swipe asynchronously
+  supabase
+    .from("swipes")
+    .upsert(
+      [{ user_id: userId, restaurant_id: restaurantId, action }],
+      { onConflict: ["user_id", "restaurant_id"] }
+    )
+    .then((result) => {
+      const { data, error } = result;
+      if (error) console.error("Error saving swipe:", error);
+      else console.log("Swipe saved:", data);
+    });
 }
 
   return (

@@ -1,53 +1,53 @@
 import React, { useState } from "react";
-import { signIn, signUp, supabase } from "../services/supabase";
+import { supabase } from "../services/supabase";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Sign up new user
   const handleSignUp = async () => {
+    setLoading(true);
     try {
-
-      const { data: existingUsers, error: fetchError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", email);
-
-      if (fetchError) throw fetchError;
-
-      if (existingUsers && existingUsers.length > 0) {
-        // User already exists — try signing them in instead
-        alert("User already exists, signing you in...");
-        return await handleSignIn();
-      }
-      
-      const { data, error } = await signUp(email, password);
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
 
-      // Once user is created, add them to your custom table
       const user = data.user;
-      if (user) {
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert([{ id: user.id, email: user.email }]);
-        if (insertError) throw insertError;
-      }
+      if (!user) throw new Error("User creation failed");
+
+      // Insert into custom table for foreign key use, ignore duplicates
+ 
 
       onLogin(user.id);
     } catch (err) {
-      alert("Failed to sign up: " + err.message);
+      alert("Sign-up failed: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Sign in existing user
   const handleSignIn = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      onLogin(data.user.id);
+
+      const user = data.user;
+      if (!user) throw new Error("Sign-in failed");
+
+      // Ensure user exists in custom table
+
+
+      onLogin(user.id);
     } catch (err) {
-      alert("Failed to sign in: " + err.message);
+      alert("Sign-in failed: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
 
   return (
     <div>
