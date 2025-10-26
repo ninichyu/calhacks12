@@ -83,6 +83,16 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-container">
+      {/* Floating kitchen utensil icons */}
+      <div className="floating-utensil">🍴</div>
+      <div className="floating-utensil">🥄</div>
+      <div className="floating-utensil">🍴</div>
+      <div className="floating-utensil">🥄</div>
+      <div className="floating-utensil">🍴</div>
+      <div className="floating-utensil">🥄</div>
+      <div className="floating-utensil">🍴</div>
+      <div className="floating-utensil">🥄</div>
+      
       <div className="login-card">
         <div className="login-header">
           <h2>Munch Match</h2>

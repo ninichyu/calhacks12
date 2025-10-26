@@ -25,6 +25,8 @@ html, body {
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  position: relative;
+  overflow: hidden;
 }
 
 .login-card {
@@ -121,8 +123,8 @@ html, body {
 }
 
 .spinner {
-  width: 16px;
-  height: 16px;
+  width: 30px;
+  height: 30px;
   border: 2px solid transparent;
   border-top: 2px solid white;
   border-radius: 50%;
@@ -179,6 +181,111 @@ html, body {
   cursor: not-allowed;
 }
 
+/* Floating utensil icons */
+.floating-utensil {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 80px;
+  pointer-events: auto;
+  z-index: 0;
+  animation: float-utensil 25s infinite linear;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.floating-utensil:hover {
+  transform: scale(1.2) translateY(-10px);
+  color: rgba(255, 255, 255, 1);
+  animation-play-state: paused;
+}
+
+.floating-utensil:nth-child(1) {
+  top: 5%;
+  left: 5%;
+  font-size: 100px;
+  animation-delay: 0s;
+  animation-duration: 30s;
+}
+
+.floating-utensil:nth-child(2) {
+  top: 15%;
+  right: 10%;
+  font-size: 90px;
+  animation-delay: -8s;
+  animation-duration: 35s;
+}
+
+.floating-utensil:nth-child(3) {
+  top: 60%;
+  left: 2%;
+  font-size: 70px;
+  animation-delay: -15s;
+  animation-duration: 28s;
+}
+
+.floating-utensil:nth-child(4) {
+  top: 70%;
+  right: 5%;
+  font-size: 110px;
+  animation-delay: -22s;
+  animation-duration: 32s;
+}
+
+.floating-utensil:nth-child(5) {
+  top: 40%;
+  left: 15%;
+  font-size: 85px;
+  animation-delay: -5s;
+  animation-duration: 26s;
+}
+
+.floating-utensil:nth-child(6) {
+  top: 80%;
+  left: 25%;
+  font-size: 95px;
+  animation-delay: -12s;
+  animation-duration: 29s;
+}
+
+.floating-utensil:nth-child(7) {
+  top: 25%;
+  left: 45%;
+  font-size: 75px;
+  animation-delay: -18s;
+  animation-duration: 33s;
+}
+
+.floating-utensil:nth-child(8) {
+  top: 85%;
+  right: 20%;
+  font-size: 105px;
+  animation-delay: -25s;
+  animation-duration: 31s;
+}
+
+@keyframes float-utensil {
+  0% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+    opacity: 0.8;
+  }
+  25% {
+    transform: translateY(-30px) rotate(90deg) scale(1.1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-15px) rotate(180deg) scale(0.9);
+    opacity: 0.7;
+  }
+  75% {
+    transform: translateY(-40px) rotate(270deg) scale(1.05);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(0px) rotate(360deg) scale(1);
+    opacity: 0.8;
+  }
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .login-card {
@@ -191,4 +298,17 @@ html, body {
     align-items: flex-start;
     padding-top: 60px;
   }
+  
+  .floating-utensil {
+    font-size: 50px;
+  }
+  
+  .floating-utensil:nth-child(1) { font-size: 60px; }
+  .floating-utensil:nth-child(2) { font-size: 55px; }
+  .floating-utensil:nth-child(3) { font-size: 45px; }
+  .floating-utensil:nth-child(4) { font-size: 65px; }
+  .floating-utensil:nth-child(5) { font-size: 52px; }
+  .floating-utensil:nth-child(6) { font-size: 58px; }
+  .floating-utensil:nth-child(7) { font-size: 48px; }
+  .floating-utensil:nth-child(8) { font-size: 62px; }
 }
