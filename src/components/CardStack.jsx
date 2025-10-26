@@ -1,29 +1,50 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
+import { LettaAI } from "../services/lettaAI";
 
 export default function CardStack({ userID, restaurants }) {
-  const [index, setIndex] = useState(0);
+  const [ai] = useState(() => new LettaAI(userID));
+  const [currentRestaurant, setCurrentRestaurant] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [validPhotos, setValidPhotos] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
+  const [explanation, setExplanation] = useState("");
+  const [aiOrderedRestaurants, setAiOrderedRestaurants] = useState([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Validate images for current restaurant whenever index changes
+  // Initialize AI and get first restaurant
+  useEffect(() => {
+    const initializeAI = async () => {
+      if (restaurants.length === 0) return;
+      
+      const firstRestaurant = await ai.chooseNextRestaurant(restaurants);
+      if (firstRestaurant) {
+        setCurrentRestaurant(firstRestaurant);
+        setExplanation(ai.getRecommendationExplanation(firstRestaurant));
+        setAiOrderedRestaurants([firstRestaurant]);
+      }
+      setIsInitialized(true);
+    };
+
+    initializeAI();
+  }, [restaurants]);
+
+  // Validate images for current restaurant whenever it changes
   useEffect(() => {
     const validateCurrentRestaurant = async () => {
-      if (index >= restaurants.length) return;
+      if (!currentRestaurant) return;
       
       setIsLoadingPhotos(true);
       setPhotoIndex(0);
       
-      const current = restaurants[index];
-      
-      if (!current.photo_ids) {
+      if (!currentRestaurant.photo_ids) {
         setValidPhotos([]);
         setIsLoadingPhotos(false);
         return;
       }
 
-      const photoIds = current.photo_ids.split(',');
+      const photoIds = currentRestaurant.photo_ids.split(',');
       const validated = [];
 
       // Quickly validate each photo
@@ -55,26 +76,29 @@ export default function CardStack({ userID, restaurants }) {
     };
 
     validateCurrentRestaurant();
-  }, [index, restaurants]);
+  }, [currentRestaurant]);
 
   if (!restaurants.length) return <p>Loading...</p>;
-  if (index >= restaurants.length) return <p>No more restaurants!</p>;
-  if (isLoadingPhotos) return <p>Loading...</p>;
+  if (!isInitialized || isLoadingPhotos) return <p>Loading...</p>;
+  if (!currentRestaurant) return <p>No more restaurants!</p>;
 
-  const current = restaurants[index];
   const currentPhoto = validPhotos[photoIndex];
 
-  console.log('Current restaurant object:', current);
-  console.log('Available fields:', Object.keys(current));
+  console.log('Current restaurant object:', currentRestaurant);
+  console.log('Available fields:', Object.keys(currentRestaurant));
 
-  function saveUserSwipe(userId, restaurantId, action) {
-    console.log('Saving swipe:', { userId, restaurantId, action });
-    setIndex(prev => prev + 1);
+  async function saveUserSwipe(userId, restaurant, action) {
+    const liked = action === 1;
+    console.log('Saving swipe:', { userId, restaurantId: restaurant.business_id, action });
+    
+    // Record feedback with AI
+    ai.recordFeedback(restaurant, liked);
 
+    // Save to Supabase
     supabase
       .from("swipes")
       .upsert(
-        [{ user_id: userId, restaurant_id: restaurantId, action: action }],
+        [{ user_id: userId, restaurant_id: restaurant.business_id, action: action }],
         { onConflict: ["user_id", "restaurant_id"] }
       )
       .then((result) => {
@@ -82,6 +106,18 @@ export default function CardStack({ userID, restaurants }) {
         if (error) console.error("Error saving swipe:", error);
         else console.log("Swipe saved successfully:", data);
       });
+
+    // Get next restaurant from AI
+    const nextRestaurant = await ai.chooseNextRestaurant(restaurants);
+    
+    if (nextRestaurant) {
+      setCurrentRestaurant(nextRestaurant);
+      setExplanation(ai.getRecommendationExplanation(nextRestaurant));
+      setAiOrderedRestaurants(prev => [...prev, nextRestaurant]);
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      setCurrentRestaurant(null);
+    }
   }
 
   function nextPhoto() {
@@ -93,10 +129,10 @@ export default function CardStack({ userID, restaurants }) {
   }
 
   const categories =
-    Array.isArray(current.categories)
-      ? current.categories
-      : typeof current.categories === "string"
-      ? current.categories.replace(/[\[\]"]+/g, "").split(",").map(s => s.trim())
+    Array.isArray(currentRestaurant.categories)
+      ? currentRestaurant.categories
+      : typeof currentRestaurant.categories === "string"
+      ? currentRestaurant.categories.replace(/[\[\]"]+/g, "").split(",").map(s => s.trim())
       : [];
 
   const filteredCategories = categories.filter(
@@ -105,12 +141,28 @@ export default function CardStack({ userID, restaurants }) {
 
   return (
     <div className="card-stack">
+      {/* AI Explanation */}
+      {explanation && (
+        <div style={{
+          background: '#f0f9ff',
+          border: '1px solid #0ea5e9',
+          borderRadius: '8px',
+          padding: '12px',
+          marginBottom: '16px',
+          fontSize: '13px',
+          color: '#0c4a6e',
+          maxWidth: '350px'
+        }}>
+          <strong>🤖 AI Pick:</strong> {explanation}
+        </div>
+      )}
+
       <div className="card">
         {validPhotos.length > 0 ? (
           <div style={{ position: 'relative' }}>
             <img 
               src={currentPhoto}
-              alt={`${current.name} - Photo ${photoIndex + 1}`}
+              alt={`${currentRestaurant.name} - Photo ${photoIndex + 1}`}
               style={{
                 width: "350px", 
                 height: "500px",
@@ -201,9 +253,9 @@ export default function CardStack({ userID, restaurants }) {
           </div>
         )}
 
-        <h3>{current.name}</h3>
-        <p>{current.stars} ⭐ • {filteredCategories.join(", ")}</p>
-        <p>{current.city}, {current.state}</p>
+        <h3>{currentRestaurant.name}</h3>
+        <p>{currentRestaurant.stars} ⭐ • {filteredCategories.join(", ")}</p>
+        <p>{currentRestaurant.city}, {currentRestaurant.state}</p>
         {validPhotos.length > 1 && (
           <p style={{ fontSize: '12px', color: '#666' }}>
             Photo {photoIndex + 1} of {validPhotos.length}
@@ -212,8 +264,8 @@ export default function CardStack({ userID, restaurants }) {
       </div>
 
       <div className="buttons">
-        <button onClick={() => saveUserSwipe(userID, current.business_id, 0)}>❌ Nope</button>
-        <button onClick={() => saveUserSwipe(userID, current.business_id, 1)}>💚 Like</button>
+        <button onClick={() => saveUserSwipe(userID, currentRestaurant, 0)}>❌ Nope</button>
+        <button onClick={() => saveUserSwipe(userID, currentRestaurant, 1)}>💚 Like</button>
       </div>
     </div>
   );
