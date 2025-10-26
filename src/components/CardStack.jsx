@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../services/supabase";
 import { getRankedRestaurants, updateUserPreferences, getUserTasteProfile } from '../services/lettaService';
 
@@ -10,6 +10,11 @@ export default function CardStack({ userID, restaurants }) {
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
   const [tasteProfile, setTasteProfile] = useState("");
+  const [swipeAnimation, setSwipeAnimation] = useState({ active: false, direction: null });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const isProcessingSwipe = useRef(false);
 
   // Initialize: Get Letta-ranked restaurants and taste profile
   useEffect(() => {
@@ -19,19 +24,16 @@ export default function CardStack({ userID, restaurants }) {
       setIsInitializing(true);
       
       try {
-        // Get AI-ranked restaurants based on user's history
         console.log('🤖 Initializing Letta for user:', userID);
         const ranked = await getRankedRestaurants(userID, restaurants);
         setRankedRestaurants(ranked);
         
-        // Get user's taste profile for display
         console.log('🤖 Fetching taste profile...');
         const profile = await getUserTasteProfile(userID);
         console.log('🤖 Taste profile received:', profile);
         setTasteProfile(profile);
       } catch (error) {
         console.error('Error initializing Letta:', error);
-        // Fallback to original order if Letta fails
         setRankedRestaurants(restaurants);
         setTasteProfile("New user - start swiping to build your profile!");
       } finally {
@@ -92,18 +94,85 @@ export default function CardStack({ userID, restaurants }) {
     }
   }, [currentIndex, rankedRestaurants]);
 
-  // Loading states
-  if (!restaurants.length) return <p>Loading restaurants...</p>;
-  if (isInitializing) return <p>AI is analyzing your preferences...</p>;
-  if (isLoadingPhotos) return <p>Loading photos...</p>;
-  if (currentIndex >= rankedRestaurants.length) return <p>No more restaurants! You've seen them all.</p>;
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (isProcessingSwipe.current || swipeAnimation.active) return;
+      
+      if (e.key === 'ArrowLeft') {
+        triggerSwipe(0); // Dislike
+      } else if (e.key === 'ArrowRight') {
+        triggerSwipe(1); // Like
+      }
+    };
 
-  const currentRestaurant = rankedRestaurants[currentIndex];
-  if (!currentRestaurant) return <p>No restaurants available.</p>;
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentIndex, rankedRestaurants]);
 
-  const currentPhoto = validPhotos[photoIndex];
+  // Main swipe trigger function
+  async function triggerSwipe(action) {
+    if (isProcessingSwipe.current || swipeAnimation.active) return;
+    
+    isProcessingSwipe.current = true;
+    const direction = action === 1 ? 'right' : 'left';
+    
+    // Start animation
+    setSwipeAnimation({ active: true, direction });
+    
+    // Wait for animation to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Process the swipe (this is the original handleSwipe logic)
+    await handleSwipe(action);
+    
+    // Reset animation state
+    setSwipeAnimation({ active: false, direction: null });
+    setDragOffset({ x: 0, y: 0 });
+    isProcessingSwipe.current = false;
+  }
 
+  // Mouse/touch drag handlers
+  function handleDragStart(e) {
+    if (isProcessingSwipe.current || swipeAnimation.active) return;
+    
+    setIsDragging(true);
+    const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+    setStartPos({ x: clientX, y: clientY });
+  }
+
+  function handleDragMove(e) {
+    if (!isDragging || isProcessingSwipe.current) return;
+    
+    e.preventDefault();
+    const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+    
+    const deltaX = clientX - startPos.x;
+    const deltaY = clientY - startPos.y;
+    
+    setDragOffset({ x: deltaX, y: deltaY });
+  }
+
+  function handleDragEnd() {
+    if (!isDragging || isProcessingSwipe.current) return;
+    setIsDragging(false);
+    
+    // If dragged more than 100px, trigger swipe
+    if (Math.abs(dragOffset.x) > 100) {
+      const action = dragOffset.x > 0 ? 1 : 0; // 1 for like, 0 for dislike
+      triggerSwipe(action);
+    } else {
+      // Snap back with animation
+      setDragOffset({ x: 0, y: 0 });
+    }
+  }
+
+  // Original handleSwipe function with all backend logic
   async function handleSwipe(action) {
+    const currentRestaurant = rankedRestaurants[currentIndex]; // ✅ add this line
+    if (!currentRestaurant) return;
     const liked = action === 1;
     console.log('Swiping:', { userId: userID, restaurantId: currentRestaurant.business_id, action });
     
@@ -159,7 +228,7 @@ export default function CardStack({ userID, restaurants }) {
         
         setIsInitializing(false);
       } else {
-        console.log(`⏭️  Swipe ${currentIndex + 1} - skipping Letta update (updates on 3, 6, 9, etc.)`);
+        console.log(`⏭️ Swipe ${currentIndex + 1} - skipping Letta update (updates on 3, 6, 9, etc.)`);
       }
 
       // Move to next restaurant
@@ -173,13 +242,26 @@ export default function CardStack({ userID, restaurants }) {
     }
   }
 
-  function nextPhoto() {
+  function nextPhoto(e) {
+    e?.stopPropagation();
     setPhotoIndex(prev => (prev + 1) % validPhotos.length);
   }
 
-  function prevPhoto() {
+  function prevPhoto(e) {
+    e?.stopPropagation();
     setPhotoIndex(prev => (prev - 1 + validPhotos.length) % validPhotos.length);
   }
+
+  // Loading states
+  if (!restaurants.length) return <p>Loading restaurants...</p>;
+  if (isInitializing) return <p>LettaAI is analyzing your preferences...</p>;
+  if (isLoadingPhotos) return <p>Loading photos...</p>;
+  if (currentIndex >= rankedRestaurants.length) return <p>No more restaurants! You've seen them all.</p>;
+
+  const currentRestaurant = rankedRestaurants[currentIndex];
+  if (!currentRestaurant) return <p>No restaurants available.</p>;
+
+  const currentPhoto = validPhotos[photoIndex];
 
   // Parse categories
   const categories = Array.isArray(currentRestaurant.categories)
@@ -192,17 +274,42 @@ export default function CardStack({ userID, restaurants }) {
     cat => !["restaurant", "restaurants", "food", "entertainment"].includes(cat.toLowerCase())
   );
 
+  // Calculate card transform
+  const getCardTransform = () => {
+    if (swipeAnimation.active) {
+      const direction = swipeAnimation.direction;
+      const translateX = direction === 'right' ? '150%' : '-150%';
+      const rotate = direction === 'right' ? '25deg' : '-25deg';
+      return `translateX(${translateX}) translateY(-50px) rotate(${rotate})`;
+    }
+    
+    if (isDragging || dragOffset.x !== 0) {
+      const rotate = dragOffset.x * 0.1;
+      return `translateX(${dragOffset.x}px) translateY(${dragOffset.y * 0.5}px) rotate(${rotate}deg)`;
+    }
+    
+    return 'translate(0, 0) rotate(0deg)';
+  };
+
+  const getCardOpacity = () => {
+    if (swipeAnimation.active) return 0;
+    if (isDragging) {
+      return Math.max(0.5, 1 - Math.abs(dragOffset.x) / 300);
+    }
+    return 1;
+  };
+
   return (
     <div style={{
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: '100vh',
+      minHeight: '60vh',
       padding: '20px',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       position: 'relative'
     }}>
-      {/* AI Taste Profile - Positioned to the side */}
+      {/* AI Taste Profile */}
       {tasteProfile && (
         <div style={{
           position: 'absolute',
@@ -264,7 +371,8 @@ export default function CardStack({ userID, restaurants }) {
         }}>
           {/* Left Arrow - Dislike */}
           <button
-            onClick={() => handleSwipe(0)}
+            onClick={() => triggerSwipe(0)}
+            disabled={isProcessingSwipe.current || swipeAnimation.active}
             style={{
               width: '70px',
               height: '70px',
@@ -273,18 +381,21 @@ export default function CardStack({ userID, restaurants }) {
               background: 'white',
               color: '#ff4458',
               fontSize: '32px',
-              cursor: 'pointer',
+              cursor: (isProcessingSwipe.current || swipeAnimation.active) ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 4px 16px rgba(255,68,88,0.3)',
               transition: 'all 0.2s ease',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              opacity: (isProcessingSwipe.current || swipeAnimation.active) ? 0.5 : 1
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = '#ff4458';
-              e.target.style.color = 'white';
-              e.target.style.transform = 'scale(1.1)';
+              if (!isProcessingSwipe.current && !swipeAnimation.active) {
+                e.target.style.background = '#ff4458';
+                e.target.style.color = 'white';
+                e.target.style.transform = 'scale(1.1)';
+              }
             }}
             onMouseLeave={(e) => {
               e.target.style.background = 'white';
@@ -296,13 +407,72 @@ export default function CardStack({ userID, restaurants }) {
           </button>
 
           {/* Restaurant Card */}
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            overflow: 'hidden',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-            width: '400px'
-          }}>
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+              width: '400px',
+              cursor: isDragging ? 'grabbing' : 'grab',
+              transform: getCardTransform(),
+              transition: swipeAnimation.active ? 'transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.5s ease' :
+                         (isDragging ? 'none' : 'transform 0.3s ease-out, opacity 0.3s ease'),
+              opacity: getCardOpacity(),
+              userSelect: 'none',
+              position: 'relative',
+              touchAction: 'none'
+            }}
+            onMouseDown={handleDragStart}
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
+          >
+            {/* Swipe indicators during drag */}
+            {(dragOffset.x > 50 || (swipeAnimation.active && swipeAnimation.direction === 'right')) && (
+              <div style={{
+                position: 'absolute',
+                top: '50px',
+                right: '30px',
+                fontSize: '80px',
+                fontWeight: 'bold',
+                color: '#01df8a',
+                transform: 'rotate(20deg)',
+                zIndex: 10,
+                textShadow: '0 0 20px rgba(1,223,138,0.8)',
+                pointerEvents: 'none',
+                border: '6px solid #01df8a',
+                padding: '10px 30px',
+                borderRadius: '12px',
+                opacity: swipeAnimation.active ? 1 : Math.min(1, Math.abs(dragOffset.x) / 100)
+              }}>
+                LIKE
+              </div>
+            )}
+            {(dragOffset.x < -50 || (swipeAnimation.active && swipeAnimation.direction === 'left')) && (
+              <div style={{
+                position: 'absolute',
+                top: '50px',
+                left: '30px',
+                fontSize: '80px',
+                fontWeight: 'bold',
+                color: '#ff4458',
+                transform: 'rotate(-20deg)',
+                zIndex: 10,
+                textShadow: '0 0 20px rgba(255,68,88,0.8)',
+                pointerEvents: 'none',
+                border: '6px solid #ff4458',
+                padding: '10px 30px',
+                borderRadius: '12px',
+                opacity: swipeAnimation.active ? 1 : Math.min(1, Math.abs(dragOffset.x) / 100)
+              }}>
+                NOPE
+              </div>
+            )}
+
             {validPhotos.length > 0 ? (
               <div style={{ position: 'relative' }}>
                 <img 
@@ -311,14 +481,18 @@ export default function CardStack({ userID, restaurants }) {
                   style={{
                     width: "100%", 
                     height: "500px",
-                    objectFit: "cover"
+                    objectFit: "cover",
+                    pointerEvents: 'none'
                   }}
+                  draggable="false"
                 />
                 
                 {validPhotos.length > 1 && (
                   <>
                     <button
                       onClick={prevPhoto}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                       style={{
                         position: 'absolute',
                         left: '10px',
@@ -336,7 +510,8 @@ export default function CardStack({ userID, restaurants }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        zIndex: 5
                       }}
                       onMouseEnter={(e) => e.target.style.background = 'white'}
                       onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.9)'}
@@ -346,6 +521,8 @@ export default function CardStack({ userID, restaurants }) {
                     
                     <button
                       onClick={nextPhoto}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                       style={{
                         position: 'absolute',
                         right: '10px',
@@ -360,10 +537,11 @@ export default function CardStack({ userID, restaurants }) {
                         cursor: 'pointer',
                         fontSize: '18px',
                         display: 'flex',
-                        alignItems: 'center',
+                        alignments: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        zIndex: 5
                       }}
                       onMouseEnter={(e) => e.target.style.background = 'white'}
                       onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.9)'}
@@ -377,7 +555,8 @@ export default function CardStack({ userID, restaurants }) {
                       left: '50%',
                       transform: 'translateX(-50%)',
                       display: 'flex',
-                      gap: '6px'
+                      gap: '6px',
+                      zIndex: 5
                     }}>
                       {validPhotos.map((_, idx) => (
                         <div
@@ -391,7 +570,12 @@ export default function CardStack({ userID, restaurants }) {
                             transition: 'all 0.2s',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
                           }}
-                          onClick={() => setPhotoIndex(idx)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhotoIndex(idx);
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
                         />
                       ))}
                     </div>
@@ -414,7 +598,7 @@ export default function CardStack({ userID, restaurants }) {
             )}
 
             {/* Restaurant Info */}
-            <div style={{ padding: '24px' }}>
+            <div style={{ padding: '24px', pointerEvents: 'none' }}>
               <h2 style={{ 
                 margin: '0 0 8px 0', 
                 fontSize: '28px',
@@ -451,7 +635,8 @@ export default function CardStack({ userID, restaurants }) {
 
           {/* Right Arrow - Like */}
           <button
-            onClick={() => handleSwipe(1)}
+            onClick={() => triggerSwipe(1)}
+            disabled={isProcessingSwipe.current || swipeAnimation.active}
             style={{
               width: '70px',
               height: '70px',
@@ -460,18 +645,21 @@ export default function CardStack({ userID, restaurants }) {
               background: 'white',
               color: '#01df8a',
               fontSize: '32px',
-              cursor: 'pointer',
+              cursor: (isProcessingSwipe.current || swipeAnimation.active) ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 4px 16px rgba(1,223,138,0.3)',
               transition: 'all 0.2s ease',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              opacity: (isProcessingSwipe.current || swipeAnimation.active) ? 0.5 : 1
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = '#01df8a';
-              e.target.style.color = 'white';
-              e.target.style.transform = 'scale(1.1)';
+              if (!isProcessingSwipe.current && !swipeAnimation.active) {
+                e.target.style.background = '#01df8a';
+                e.target.style.color = 'white';
+                e.target.style.transform = 'scale(1.1)';
+              }
             }}
             onMouseLeave={(e) => {
               e.target.style.background = 'white';
@@ -481,6 +669,18 @@ export default function CardStack({ userID, restaurants }) {
           >
             ♥
           </button>
+        </div>
+
+        {/* Keyboard hint */}
+        <div style={{
+          background: 'rgba(255,255,255,0.85)',
+          borderRadius: '8px',
+          padding: '8px 16px',
+          fontSize: '12px',
+          color: '#666',
+          fontWeight: '400'
+        }}>
+          💡 Swipe, click arrows, or use keyboard: ← Nope • → Yes
         </div>
       </div>
     </div>
