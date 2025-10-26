@@ -36,6 +36,10 @@ const categories =
     ? current.categories.replace(/[\[\]"]+/g, "").split(",").map(s => s.trim())
     : [];
 
+const filteredCategories = categories.filter(
+  cat => !["restaurant", "restaurants", "food", "entertainment"].includes(cat.toLowerCase())
+);
+
 const [imageUrls, setImageUrls] = useState({}); 
 
   useEffect(() => {
@@ -73,7 +77,7 @@ const [imageUrls, setImageUrls] = useState({});
                 borderRadius: "8px" 
             }}/>
         <h3>{current.name}</h3>
-        <p>{current.rating} ⭐ • {categories.join(", ")}</p>
+        <p>{current.stars} ⭐ • {filteredCategories.join(", ")}</p>
         <p>{current.city}, {current.state}</p>        
       </div>
 
