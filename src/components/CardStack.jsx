@@ -85,15 +85,11 @@ export default function CardStack({ userID, restaurants }) {
   }
 
   function nextPhoto() {
-    if (photoIndex < validPhotos.length - 1) {
-      setPhotoIndex(prev => prev + 1);
-    }
+    setPhotoIndex(prev => (prev + 1) % validPhotos.length);
   }
 
   function prevPhoto() {
-    if (photoIndex > 0) {
-      setPhotoIndex(prev => prev - 1);
-    }
+    setPhotoIndex(prev => (prev - 1 + validPhotos.length) % validPhotos.length);
   }
 
   const categories =
@@ -125,49 +121,45 @@ export default function CardStack({ userID, restaurants }) {
             
             {validPhotos.length > 1 && (
               <>
-                {photoIndex > 0 && (
-                  <button
-                    onClick={prevPhoto}
-                    style={{
-                      position: 'absolute',
-                      left: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'rgba(0,0,0,0.5)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '40px',
-                      height: '40px',
-                      cursor: 'pointer',
-                      fontSize: '20px'
-                    }}
-                  >
-                    ←
-                  </button>
-                )}
+                <button
+                  onClick={prevPhoto}
+                  style={{
+                    position: 'absolute',
+                    left: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    cursor: 'pointer',
+                    fontSize: '20px'
+                  }}
+                >
+                  ←
+                </button>
                 
-                {photoIndex < validPhotos.length - 1 && (
-                  <button
-                    onClick={nextPhoto}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'rgba(0,0,0,0.5)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '40px',
-                      height: '40px',
-                      cursor: 'pointer',
-                      fontSize: '20px'
-                    }}
-                  >
-                    →
-                  </button>
-                )}
+                <button
+                  onClick={nextPhoto}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    cursor: 'pointer',
+                    fontSize: '20px'
+                  }}
+                >
+                  →
+                </button>
 
                 <div style={{
                   position: 'absolute',
