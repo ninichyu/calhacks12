@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
 import SwipeCard from "./SwipeCard"; // optional, or just render a div for demo
 
@@ -36,10 +36,35 @@ const categories =
     ? current.categories.replace(/[\[\]"]+/g, "").split(",").map(s => s.trim())
     : [];
 
+const [imageUrls, setImageUrls] = useState({}); 
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      const urls = {};
+
+      for (const r of restaurants) {
+        if (!r.photo_ids) continue; 
+
+        const { data } = supabase.storage
+          .from("photos")
+          .getPublicUrl(r.photo_ids.split(',')[0]+'.jpg');
+
+        urls[r.business_id] = data.publicUrl;
+      }
+
+      setImageUrls(urls);
+    };
+
+    if (restaurants.length > 0) {
+      fetchImages();
+    }
+  }, [restaurants]);
+  console.log(restaurants[0])
+
   return (
     <div className="card-stack">
       <div className="card">
-        <img src={current.image_url}
+        <img src={imageUrls[current.business_id]}
             alt={current.name} 
             style={{
                 width: "350px", 
@@ -48,11 +73,8 @@ const categories =
                 borderRadius: "8px" 
             }}/>
         <h3>{current.name}</h3>
-        <p>
-  {current.rating} ⭐ • {categories.join(", ")}
-</p>
-
-        <p>{current.location}</p>
+        <p>{current.rating} ⭐ • {categories.join(", ")}</p>
+        <p>{current.city}, {current.state}</p>        
       </div>
 
       <div className="buttons">
