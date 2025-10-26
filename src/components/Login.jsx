@@ -6,6 +6,7 @@ export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   // Helper: ensure user exists in custom table
   const ensureUserInTable = async (user) => {
@@ -72,44 +73,80 @@ export default function Login({ onLogin }) {
     }
   };
 
+  const handleAuth = async () => {
+    if (isSignUp) {
+      await handleSignUp();
+    } else {
+      await handleSignIn();
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h2 className="login-title">Munch Match</h2>
+          <h2>Munch Match</h2>
+          <p>{isSignUp ? "Create your account" : "Sign in to start swiping"}</p>
         </div>
-        
+
         <div className="login-form">
-          <input
-            className="login-input"
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-          <input
-            className="login-input"
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
-          
-          <div className="login-button-group">
-            <button 
-              className="login-button login-button-primary"
-              onClick={handleSignIn} 
+          <div className="input-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="login-input"
               disabled={loading}
-            >
-              {loading ? "Signing In..." : "Sign In"}
-            </button>
-            <button 
-              className="login-button login-button-secondary"
-              onClick={handleSignUp} 
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="login-input"
               disabled={loading}
-            >
-              {loading ? "Signing Up..." : "Sign Up"}
-            </button>
+            />
+          </div>
+
+          <button
+            onClick={handleAuth}
+            className="login-button"
+            disabled={loading || !email || !password}
+          >
+            {loading ? (
+              <div className="loading-spinner">
+                <div className="spinner"></div>
+                Processing...
+              </div>
+            ) : (
+              isSignUp ? "Create Account" : "Sign In"
+            )}
+          </button>
+
+          <div className="login-divider">
+            <span>or</span>
+          </div>
+
+          <div className="toggle-section">
+            <p>
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="toggle-button"
+                disabled={loading}
+              >
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </button>
+            </p>
           </div>
         </div>
       </div>
